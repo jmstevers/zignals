@@ -59,7 +59,7 @@ pub fn main() !void {
 
 ### Explanation
 
-After [installing](#installation), start by importing the library
+After [installing](#installation), start by importing the library.
 
 ```zig
 const zignals = @import("zignals");
@@ -107,14 +107,14 @@ _ = system.effect(log, .{increment});
 >defer effect.deinit();
 >```
 
-The effect has already run once during initialization
+The effect has already run once during initialization.
 
 ```zig
 try expectEqual(1, count);
 try expectEqual(1, increment.get());
 ```
 
-When a signal updates, all derived values are marked dirty and effects that depend on the signal automatically updated
+When a signal updates, all derived values are marked dirty and effects that depend on the signal automatically updated.
 
 ```zig
 counter.set(1);
