@@ -266,10 +266,3 @@ test "effect clears subs when untracked" {
 
     try expectEqual(2, count);
 }
-
-test "thing" {
-    var system = zignals.System{};
-    const name = system.signal("Bob");
-
-    name.set("Alice");
-}
