@@ -114,7 +114,7 @@ try expectEqual(1, count);
 try expectEqual(1, increment.get());
 ```
 
-When a signal updates, all derived values are marked dirty and effects that depend on the signal automatically updated.
+When a signal updates, all derived values are marked dirty and effects that depend on the signal are automatically updated.
 
 ```zig
 counter.set(1);
