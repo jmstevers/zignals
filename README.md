@@ -2,7 +2,7 @@
 zignals is a signals library for Zig, with signals, derivations, and effects.
 
 > [!WARNING]  
-> This is a toy project and not mean for production use.
+> This is a toy project and is not meant for production use.
 
 ## Installation
 
