@@ -1,0 +1,15 @@
+.{
+    .name = "zignals",
+    .version = "0.1.0",
+    .dependencies = .{
+        .zbench = .{
+            .url = "git+https://github.com/hendriknielaender/zBench#fb3c3bb04070b6d7fcc0b9a27d6e89d45b1141c6",
+            .hash = "122025b6da5ae00e03b4011c07a2b4a0faeb7d5982dbd69a0cbca5e77ea4c03f4fce",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
