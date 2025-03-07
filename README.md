@@ -42,17 +42,15 @@ fn addOne(x: u32) u32 {
 
 pub fn main() !void {
     var gpa: std.heap.DebugAllocator(.{}) = .init;
-    defer gpa.deinit();
+    defer gpa.deinit(allocator);
     const allocator = gpa.allocator();
 
-    var system = zignals.System.init(allocator);
-
-    const counter = system.signalT(u32, 0);
-    defer counter.deinit();
-    const increment = try system.derived(addOne, .{counter});
-    defer increment.deinit();
-    const effect = try system.effect(log, .{increment});
-    defer effect.deinit();
+    const counter = zignals.signalT(u32, 0);
+    defer counter.deinit(allocator);
+    const increment = try zignals.derived(allocator, addOne, .{counter});
+    defer increment.deinit(allocator);
+    const effect = try zignals.effect(allocator, log, .{increment});
+    defer effect.deinit(allocator);
 
     try expectEqual(1, count);
     try expectEqual(1, increment.get());
@@ -72,16 +70,16 @@ After [installing](#installation), start by importing the library.
 const zignals = @import("zignals");
 ```
 
-First, initialize a system that will keep track of update batches.
+First, initialize a zignals that will keep track of update batches.
 
 ```zig
-var system = zignals.System.init(allocator);
+var zignals = zignals.System.init(allocator);
 ```
 
 Next, define a signal with an initial value. Signals are reactive state containers that notify dependents when their values change.
 
 ```zig
-const counter = system.signalT(u32, 0);
+const counter = zignals.signalT(u32, 0);
 ```
 
 > [!TIP]
@@ -94,19 +92,19 @@ const counter = system.signalT(u32, 0);
 >
 >const foo: Foo = .init;
 >
->const signal = system.signal(foo); // inferred as Signal(Foo)
+>const signal = zignals.signal(foo); // inferred as Signal(Foo)
 > ```
 
 With the signal created, you can create a derived value. Derivations are lazily computed and only update when you read them.
 
 ```zig
-const increment = try system.derived(addOne, .{counter});
+const increment = try zignals.derived(allocator, addOne, .{counter});
 ```
 
 This creates an effect that runs when dependencies change. Effects run immediately on creation and again whenever their dependencies update.
 
 ```zig
-const effect = try system.effect(log, .{increment});
+const effect = try zignals.effect(allocator, log, .{increment});
 ```
 
 The effect has already run once during initialization.
