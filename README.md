@@ -1,8 +1,8 @@
 # zignals
-zignals is a signals library for Zig, with signals, derivations, and effects.
+zignals is a reactive programming library for Zig.
 
 > [!WARNING]  
-> This is a toy project and is not meant for production use.
+> This is a toy project and is NOT meant for production use.
 
 ## Installation
 
@@ -41,11 +41,18 @@ fn addOne(x: u32) u32 {
 }
 
 pub fn main() !void {
-    var system = zignals.System{};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+    defer gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var system = zignals.System.init(allocator);
 
     const counter = system.signalT(u32, 0);
-    const increment = system.derived(addOne, .{counter});
-    _ = system.effect(log, .{increment});
+    defer counter.deinit();
+    const increment = try system.derived(addOne, .{counter});
+    defer increment.deinit();
+    const effect = try system.effect(log, .{increment});
+    defer effect.deinit();
 
     try expectEqual(1, count);
     try expectEqual(1, increment.get());
@@ -68,7 +75,7 @@ const zignals = @import("zignals");
 First, initialize a system that will keep track of update batches.
 
 ```zig
-var system = zignals.System{};
+var system = zignals.System.init(allocator);
 ```
 
 Next, define a signal with an initial value. Signals are reactive state containers that notify dependents when their values change.
@@ -81,10 +88,11 @@ const counter = system.signalT(u32, 0);
 >To create a signal without specifying its type, you can create signals with automatic type inference using the `signal` function.
 >```zig
 >const Foo = struct {
->   bar: []const u8,
+>   pub const init = .{}
+>   bar: []const u8 = "baz",
 >};
 >
->const foo = Foo{};
+>const foo: Foo = .init;
 >
 >const signal = system.signal(foo); // inferred as Signal(Foo)
 > ```
@@ -92,20 +100,14 @@ const counter = system.signalT(u32, 0);
 With the signal created, you can create a derived value. Derivations are lazily computed and only update when you read them.
 
 ```zig
-const increment = system.derived(addOne, .{counter});
+const increment = try system.derived(addOne, .{counter});
 ```
 
 This creates an effect that runs when dependencies change. Effects run immediately on creation and again whenever their dependencies update.
 
 ```zig
-_ = system.effect(log, .{increment});
+const effect = try system.effect(log, .{increment});
 ```
-> [!TIP]
->In this example, we discard the effect's return value. If you need to properly clean up an effect, you should capture the value and call `deinit()` like this.
->```zig
->const effect = system.effect(log, .{increment});
->defer effect.deinit();
->```
 
 The effect has already run once during initialization.
 
@@ -123,21 +125,12 @@ try expectEqual(2, count);
 try expectEqual(2, increment.get());
 ```
 
-## Configuration
 
-To avoid heap allocation, zignals uses fixed size arrays to store dependencies and subscribers. To modify the maximum amounts add, a `max_dependencies` or `max_subscribers` field to the `zignals` dependency in your `build.zig`
-```zig
-b.dependency("zignals", .{
-    .target = target,
-    .optimize = optimize,
-    .max_dependencies = 4, // defaults to 16
-    .max_subscribers = 32, // defaults to 16
-})
-```
+## Special Thanks
 
-## Thanks To
-
-- [alien-signals-go](https://github.com/delaneyj/alien-signals-go) for the topology and effect tests.
+- [signalparty](https://github.com/delaneyj/signalparty) for the optimization of the implementation.
+- [alien-signals](https://github.com/stackblitz/alien-signals) for the topology and effect tests.
+- [reco](https://github.com/gingerfocus/reco) for the initial inspiration.
 
 ## License
 
