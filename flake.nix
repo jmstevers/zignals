@@ -29,8 +29,8 @@
           packages = with pkgs; [
             zig
             zls
-            hotspot
-            linuxKernel.packages.linux_latest_libre.perf
+            # hotspot
+            # linuxKernel.packages.linux_latest_libre.perf
           ];
         };
       }
