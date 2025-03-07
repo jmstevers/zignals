@@ -47,8 +47,8 @@ pub fn Effect(comptime fun: anytype, comptime n: u32) type {
             var fn_args: FnArgs = undefined;
             var version_sum: u32 = 0;
             inline for (0..n) |i| {
-                version_sum += self.deps[i].version();
                 fn_args[i] = self.deps[i].get(@TypeOf(fn_args[i]));
+                version_sum += self.deps[i].version();
             }
 
             if (self.version_sum == version_sum) return;

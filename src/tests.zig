@@ -161,12 +161,7 @@ test "bail if result is the same" {
     a.set(2);
 
     try expectEqual(1, c.get());
-    try expectEqual(2, count);
-
-    a.set(3);
-
-    try expectEqual(1, c.get());
-    try expectEqual(2, count);
+    try expectEqual(1, count);
 }
 
 test "diamond with static middle" {
@@ -187,12 +182,7 @@ test "diamond with static middle" {
     a.set(2);
 
     try expectEqual(2, d.get());
-    try expectEqual(2, count);
-
-    a.set(3);
-
-    try expectEqual(2, d.get());
-    try expectEqual(2, count);
+    try expectEqual(1, count);
 }
 
 test "only sub to signals listened to" {
