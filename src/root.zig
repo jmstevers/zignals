@@ -1,11 +1,11 @@
 pub const Signal = @import("signal.zig").Signal;
 pub const Derived = @import("derived.zig").Derived;
 pub const Effect = @import("effect.zig").Effect;
+pub const Dependency = @import("Dependency.zig");
+pub const Subscriber = @import("Subscriber.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Dependency = @import("Dependency.zig");
-const Subscriber = @import("Subscriber.zig");
 
 /// Creates a signal from the provided value.
 /// This is a convenience wrapper around `signalT` that automatically determines the type.
