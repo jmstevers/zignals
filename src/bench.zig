@@ -1,15 +1,13 @@
 const std = @import("std");
 const zbench = @import("zbench");
-const zignals = @import("root.zig");
+const z = @import("root.zig");
 
-fn benchmark(name: []const u8, comptime f: fn (std.mem.Allocator) void) !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
-
+fn benchmark(allocator: std.mem.Allocator, name: []const u8, comptime f: fn (std.mem.Allocator) void) !void {
     var bench = zbench.Benchmark.init(
         allocator,
-        .{},
+        .{
+            .iterations = 1000,
+        },
     );
     defer bench.deinit();
     try bench.add(name, f, .{});
@@ -20,32 +18,56 @@ fn addOne(x: u32) u32 {
     return x + 1;
 }
 
-fn log(x: u32) void {
-    std.debug.print("x: {x}", .{x});
-}
-
 fn noop(_: u32) void {}
 
-var global_signal: *zignals.Signal(u32) = undefined;
+fn log(x: u32) void {
+    std.debug.print("x: {}\n", .{x});
+}
 
-fn deepGraph(_: std.mem.Allocator) void {
+var global_signal: *z.Signal(u32) = undefined;
+
+fn propagate(_: std.mem.Allocator) void {
     global_signal.set(global_signal.get() + 1);
 }
 
-test deepGraph {
-    @setEvalBranchQuota(20000000);
+const height = 1000;
+const width = 1000;
 
-    var system = zignals.System{};
-    global_signal = system.signalT(u32, 1);
+const DeepChain: type = blk: {
+    @setEvalBranchQuota(20_000_000);
 
-    var derived = system.derived(addOne, .{global_signal});
-    inline for (2..1000) |_| {
-        derived = system.derived(addOne, .{derived});
+    var types: [height + 1]type = undefined;
+    types[0] = *z.Derived(addOne, 1);
+
+    for (1..height) |i| {
+        types[i] = *z.Derived(addOne, 1);
     }
 
-    _ = system.effect(noop, .{derived});
+    types[height] = *z.Effect(noop, 1);
 
-    try benchmark("deep graph", deepGraph);
+    break :blk std.meta.Tuple(&types);
+};
+
+var chains: [width]DeepChain = undefined;
+
+test propagate {
+    @setEvalBranchQuota(20_000_000);
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    global_signal = z.signalT(u32, 0);
+
+    for (0..width) |i| {
+        chains[i][0] = try z.derived(allocator, addOne, .{global_signal});
+        inline for (1..height) |j| {
+            chains[i][j] = try z.derived(allocator, addOne, .{chains[i][j - 1]});
+        }
+        chains[i][height] = try z.effect(allocator, noop, .{chains[i][height - 1]});
+    }
+
+    try benchmark(allocator, "propagate", propagate);
 }
 
 fn wide(
@@ -85,25 +107,25 @@ fn wide(
 }
 
 const Deps = struct {
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
-    *zignals.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
+    *z.Signal(u32),
 };
 
-var global_derived: *zignals.Derived(wide) = undefined;
+var global_derived: *z.Derived(wide, 16) = undefined;
 var global_deps: Deps = undefined;
 
 fn wideGraph(_: std.mem.Allocator) void {
@@ -114,15 +136,17 @@ fn wideGraph(_: std.mem.Allocator) void {
 }
 
 test wideGraph {
-    var system = zignals.System{};
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     var deps: Deps = undefined;
     inline for (deps, 0..) |_, i| {
-        deps[i] = system.signalT(u32, 0);
+        deps[i] = z.signalT(u32, 0);
     }
 
     global_deps = deps;
-    global_derived = system.derived(wide, global_deps);
+    global_derived = try z.derived(allocator, wide, global_deps);
 
-    try benchmark("wide graph", wideGraph);
+    try benchmark(allocator, "wide graph", wideGraph);
 }

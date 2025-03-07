@@ -1,7 +1,6 @@
 const std = @import("std");
-const Signal = @import("signal.zig").Signal;
-const Node = @import("Node.zig");
-const System = @import("System.zig");
+const Subscriber = @import("Subscriber.zig");
+const Dependency = @import("Dependency.zig");
 
 /// Effects run immediately when created and again whenever any dependency updates.
 ///
@@ -12,45 +11,48 @@ const System = @import("System.zig");
 ///    std.debug.print("Value: {}\n", .{x});
 /// }
 ///
-/// const counter = system.signalT(u32, 0);
-/// const printer = system.effect(print, .{counter});
-/// defer printer.deinit();
+/// const counter = zignals.signalT(u32, 0);
+/// defer counter.deinit(allocator);
+/// const printer = try zignals.effect(allocator, print, .{counter});
+/// defer printer.deinit(allocator);
 /// ```
 ///
 /// ### Function Signature
-pub fn Effect(comptime fun: anytype) type {
+pub fn Effect(comptime fun: anytype, comptime n: u32) type {
     const Fn: type = @TypeOf(fun);
     const FnArgs: type = std.meta.ArgsTuple(Fn);
-    const fields = @typeInfo(FnArgs).@"struct".fields;
     const fallible = switch (@typeInfo(@typeInfo(Fn).@"fn".return_type.?)) {
         .error_set => true,
         else => false,
     };
 
     return struct {
-        node: *Node,
-        system: *System,
-        last_update: u64 = 0,
-        fn_args: ?FnArgs = null,
+        version_sum: ?u32 = null,
+        deps: [n]Dependency,
 
-        pub fn init(node: *Node, system: *System) @This() {
+        pub fn init(deps: [n]Dependency) @This() {
             return .{
-                .node = node,
-                .system = system,
+                .deps = deps,
             };
         }
+
         pub fn deinit(self: *@This()) void {
-            self.node.deinit();
+            const sub = self.subscriber();
+            for (&self.deps) |*dep| {
+                dep.removeSub(sub);
+            }
         }
 
-        pub fn get(self: *@This()) void {
+        pub fn markDirty(self: *@This()) void {
             var fn_args: FnArgs = undefined;
-            inline for (0..fields.len) |i| {
-                fn_args[i] = self.node.deps[i].get(fields[i].type);
+            var version_sum: u32 = 0;
+            inline for (0..n) |i| {
+                version_sum += self.deps[i].version();
+                fn_args[i] = self.deps[i].get(@TypeOf(fn_args[i]));
             }
 
-            if (self.fn_args != null and std.meta.eql(self.fn_args, fn_args)) return;
-            self.fn_args = fn_args;
+            if (self.version_sum == version_sum) return;
+            self.version_sum = version_sum;
 
             if (fallible) {
                 // TODO: better error handling
@@ -61,15 +63,8 @@ pub fn Effect(comptime fun: anytype) type {
             }
         }
 
-        pub fn getNode(self: @This()) *Node {
-            return self.node;
-        }
-
-        pub fn markDirty(self: *@This()) void {
-            if (self.last_update == self.system.current_update) return;
-            self.last_update = self.system.current_update;
-
-            self.get();
+        pub fn subscriber(self: *@This()) Subscriber {
+            return .init(self, markDirty);
         }
     };
 }

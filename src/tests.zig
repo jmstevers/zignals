@@ -51,12 +51,15 @@ var count: u32 = 0;
 
 test "drop aba updates" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(addOne, .{a});
-    const c = system.derived(add, .{ a, b });
-    const d = system.derived(countCalls, .{c});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, addOne, .{a});
+    const c = try zignals.derived(gpa, add, .{ a, b });
+    const d = try zignals.derived(gpa, countCalls, .{c});
 
     try expectEqual(3, d.get());
     try expectEqual(1, count);
@@ -69,12 +72,15 @@ test "drop aba updates" {
 
 test "diamond" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 0);
-    const b = system.derived(addOne, .{a});
-    const c = system.derived(addOne, .{a});
-    const d = system.derived(countCalls2, .{ b, c });
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 0);
+    const b = try zignals.derived(gpa, addOne, .{a});
+    const c = try zignals.derived(gpa, addOne, .{a});
+    const d = try zignals.derived(gpa, countCalls2, .{ b, c });
 
     try expectEqual(2, d.get());
     try expectEqual(1, count);
@@ -87,13 +93,16 @@ test "diamond" {
 
 test "diamond tail" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(addOne, .{a});
-    const c = system.derived(addOne, .{a});
-    const d = system.derived(add, .{ b, c });
-    const e = system.derived(countCalls, .{d});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, addOne, .{a});
+    const c = try zignals.derived(gpa, addOne, .{a});
+    const d = try zignals.derived(gpa, add, .{ b, c });
+    const e = try zignals.derived(gpa, countCalls, .{d});
 
     try expectEqual(4, e.get());
     try expectEqual(1, count);
@@ -106,14 +115,17 @@ test "diamond tail" {
 
 test "jagged diamond tails" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(addOne, .{a});
-    const c = system.derived(addOne, .{a});
-    const d = system.derived(addOne, .{c});
-    const e = system.derived(countCalls2, .{ b, d });
-    const f = system.derived(countCalls, .{e});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, addOne, .{a});
+    const c = try zignals.derived(gpa, addOne, .{a});
+    const d = try zignals.derived(gpa, addOne, .{c});
+    const e = try zignals.derived(gpa, countCalls2, .{ b, d });
+    const f = try zignals.derived(gpa, countCalls, .{e});
 
     try expectEqual(5, f.get());
     try expectEqual(5, e.get());
@@ -134,11 +146,14 @@ test "jagged diamond tails" {
 
 test "bail if result is the same" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(one, .{a});
-    const c = system.derived(countCalls, .{b});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, one, .{a});
+    const c = try zignals.derived(gpa, countCalls, .{b});
 
     try expectEqual(1, c.get());
     try expectEqual(1, count);
@@ -146,17 +161,25 @@ test "bail if result is the same" {
     a.set(2);
 
     try expectEqual(1, c.get());
-    try expectEqual(1, count);
+    try expectEqual(2, count);
+
+    a.set(3);
+
+    try expectEqual(1, c.get());
+    try expectEqual(2, count);
 }
 
 test "diamond with static middle" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(one, .{a});
-    const c = system.derived(one, .{a});
-    const d = system.derived(countCalls2, .{ b, c });
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, one, .{a});
+    const c = try zignals.derived(gpa, one, .{a});
+    const d = try zignals.derived(gpa, countCalls2, .{ b, c });
 
     try expectEqual(2, d.get());
     try expectEqual(1, count);
@@ -164,16 +187,24 @@ test "diamond with static middle" {
     a.set(2);
 
     try expectEqual(2, d.get());
-    try expectEqual(1, count);
+    try expectEqual(2, count);
+
+    a.set(3);
+
+    try expectEqual(2, d.get());
+    try expectEqual(2, count);
 }
 
 test "only sub to signals listened to" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(addOne, .{a});
-    _ = system.derived(countCalls, .{a});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, addOne, .{a});
+    _ = try zignals.derived(gpa, countCalls, .{a});
 
     try expectEqual(2, b.get());
     try expectEqual(0, count);
@@ -186,37 +217,44 @@ test "only sub to signals listened to" {
 
 test "only sub to signals listened to 2" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(countCalls, .{a});
-    const c = system.derived(countCalls, .{b});
-    const d = system.derived(identity, .{a});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, countCalls, .{a});
+    const c = try zignals.derived(gpa, countCalls, .{b});
+    const d = try zignals.derived(gpa, identity, .{a});
 
     var result_num: u32 = 0;
-    const result = system.signalT(*u32, &result_num);
-    const effect = system.effect(setResult, .{ result, c });
+    const result = zignals.signalT(*u32, &result_num);
+    const effect = try zignals.effect(gpa, setResult, .{ result, c });
 
-    try expectEqual(2, count);
     try expectEqual(1, result_num);
     try expectEqual(1, d.get());
+    try expectEqual(2, count);
 
     effect.deinit();
 
     a.set(2);
 
-    try expectEqual(2, count);
     try expectEqual(2, d.get());
+    try expectEqual(2, count);
+    try expectEqual(1, result_num);
 }
 
 test "ensure subs update" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(identity, .{a});
-    const c = system.derived(one, .{a});
-    const d = system.derived(countCalls2, .{ b, c });
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, identity, .{a});
+    const c = try zignals.derived(gpa, one, .{a});
+    const d = try zignals.derived(gpa, countCalls2, .{ b, c });
 
     try expectEqual(2, d.get());
     try expectEqual(1, count);
@@ -229,13 +267,16 @@ test "ensure subs update" {
 
 test "ensure subs update despite two deps being unmarked" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(identity, .{a});
-    const c = system.derived(one, .{a});
-    const d = system.derived(one, .{a});
-    const e = system.derived(countCalls3, .{ b, c, d });
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, identity, .{a});
+    const c = try zignals.derived(gpa, one, .{a});
+    const d = try zignals.derived(gpa, one, .{a});
+    const e = try zignals.derived(gpa, countCalls3, .{ b, c, d });
 
     try expectEqual(3, e.get());
     try expectEqual(1, count);
@@ -248,16 +289,22 @@ test "ensure subs update despite two deps being unmarked" {
 
 test "effect clears subs when untracked" {
     count = 0;
-    var system = zignals.System{};
 
-    const a = system.signalT(u32, 1);
-    const b = system.derived(countCalls, .{a});
-    const effect = system.effect(noop, .{b});
+    var arena = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    defer arena.deinit();
+    const gpa = arena.allocator();
+
+    const a = zignals.signalT(u32, 1);
+    const b = try zignals.derived(gpa, countCalls, .{a});
+    const effect = try zignals.effect(gpa, noop, .{b});
 
     try expectEqual(1, count);
+    try expectEqual(1, b.get());
 
     a.set(2);
 
+    try expectEqual(2, count);
+    try expectEqual(2, b.get());
     try expectEqual(2, count);
 
     effect.deinit();

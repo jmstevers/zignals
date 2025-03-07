@@ -1,13 +1,14 @@
 const std = @import("std");
-const Node = @import("Node.zig");
-const System = @import("System.zig");
+const Subscriber = @import("Subscriber.zig");
+const Dependency = @import("Dependency.zig");
+const Allocator = std.mem.Allocator;
 
 /// Signals are values that can be observed and updated.
 ///
 /// ### Example
 ///
 /// ```
-/// const name = system.signalT([]const u8, "Bob");
+/// const name = zignals.signalT([]const u8, "Bob");
 /// try std.testing.expectEqual("Bob", name.get());
 ///
 /// name.set("Alice");
@@ -18,19 +19,17 @@ const System = @import("System.zig");
 pub fn Signal(comptime T: type) type {
     return struct {
         value: T,
-        node: *Node,
-        system: *System,
+        version: u32 = 1,
+        subs: std.ArrayListUnmanaged(Subscriber) = .empty,
 
-        pub fn init(value: T, node: *Node, system: *System) @This() {
+        pub fn init(value: T) @This() {
             return .{
                 .value = value,
-                .node = node,
-                .system = system,
             };
         }
 
-        pub fn deinit(self: *@This()) void {
-            self.node.deinit();
+        pub fn deinit(self: *@This(), allocator: Allocator) void {
+            self.subs.deinit(allocator);
         }
 
         pub fn get(self: @This()) T {
@@ -40,24 +39,31 @@ pub fn Signal(comptime T: type) type {
         pub fn set(self: *@This(), value: T) void {
             if (std.meta.eql(self.value, value)) return;
             self.value = value;
+            self.version += 1;
 
-            self.emit();
-        }
-
-        pub fn getNode(self: @This()) *Node {
-            return self.node;
-        }
-
-        pub fn markDirty(self: *@This()) void {
-            for (self.node.getSubs()) |node| {
-                node.markDirty();
+            for (self.subs.items) |sub| {
+                sub.markDirty();
             }
         }
 
-        pub fn emit(self: *@This()) void {
-            if (self.node.subs_len == 0) return;
-            self.system.current_update += 1;
-            self.markDirty();
+        fn v(self: *@This()) u32 {
+            return self.version;
+        }
+
+        pub fn addSub(self: *@This(), allocator: Allocator, sub: Subscriber) !void {
+            try self.subs.append(allocator, sub);
+        }
+
+        pub fn removeSub(self: *@This(), sub: Subscriber) void {
+            for (self.subs.items, 0..) |item, i| {
+                if (item.ptr != sub.ptr) continue;
+                _ = self.subs.swapRemove(i);
+                return;
+            }
+        }
+
+        pub fn dependency(self: *@This()) Dependency {
+            return .init(T, self, v, addSub, removeSub);
         }
     };
 }
