@@ -7,8 +7,6 @@ const Allocator = std.mem.Allocator;
 const Dependency = @import("Dependency.zig");
 const Subscriber = @import("Subscriber.zig");
 
-pub var current_update: u32 = 0;
-
 /// Creates a signal from the provided value.
 /// This is a convenience wrapper around `signalT` that automatically determines the type.
 ///
@@ -118,7 +116,7 @@ pub inline fn effect(
     }
     var eff = Effect(fun, n).init(dependencies);
 
-    const sub: Subscriber = eff.subscriber();
+    const sub = eff.subscriber();
 
     for (&dependencies) |*dep| {
         try dep.addSub(allocator, sub);
