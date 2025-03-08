@@ -27,7 +27,7 @@ pub fn Effect(comptime fun: anytype, comptime n: u32) type {
     };
 
     return struct {
-        version_sum: ?u32 = null,
+        version_sum: u32 = 0,
         deps: [n]Dependency,
 
         pub fn init(deps: [n]Dependency) @This() {

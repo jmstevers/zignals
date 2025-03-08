@@ -30,7 +30,7 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
         value: T = undefined,
         dirty: bool = true,
         version: u32 = 1,
-        version_sum: ?u32 = null,
+        version_sum: u32 = 0,
         deps: [n]Dependency,
         subs: std.ArrayListUnmanaged(Subscriber) = .empty,
 
