@@ -47,8 +47,10 @@ pub fn main() !void {
 
     const counter = zignals.signalT(u32, 0);
     defer counter.deinit(allocator);
+
     const increment = try zignals.derived(allocator, addOne, .{counter});
     defer increment.deinit(allocator);
+
     const effect = try zignals.effect(allocator, log, .{increment});
     defer effect.deinit(allocator);
 
@@ -86,11 +88,10 @@ const counter = zignals.signalT(u32, 0);
 >To create a signal without specifying its type, you can create signals with automatic type inference using the `signal` function.
 >```zig
 >const Foo = struct {
->   pub const init = .{}
 >   bar: []const u8 = "baz",
 >};
 >
->const foo: Foo = .init;
+>const foo: Foo = .{};
 >
 >const signal = zignals.signal(foo); // inferred as Signal(Foo)
 > ```
