@@ -3,7 +3,6 @@ const Subscriber = @import("Subscriber.zig");
 const Allocator = std.mem.Allocator;
 
 const VTable = struct {
-    version: *const fn (ptr: *anyopaque) u32,
     get: *const fn (ptr: *anyopaque, result: *anyopaque) void,
     addSub: *const fn (ptr: *anyopaque, allocator: Allocator, sub: Subscriber) anyerror!void,
     removeSub: *const fn (ptr: *anyopaque, sub: Subscriber) void,
@@ -15,17 +14,11 @@ vtable: VTable,
 pub fn init(
     comptime T: type,
     pointer: anytype,
-    comptime versionFn: fn (ptr: @TypeOf(pointer)) u32,
     comptime addSubFn: fn (ptr: @TypeOf(pointer), allocator: Allocator, sub: Subscriber) anyerror!void,
     comptime removeSubFn: fn (ptr: @TypeOf(pointer), sub: Subscriber) void,
 ) @This() {
     const Ptr = @TypeOf(pointer);
     const vtable = struct {
-        fn version(ptr: *anyopaque) u32 {
-            const self: Ptr = @ptrCast(@alignCast(ptr));
-            return versionFn(self);
-        }
-
         fn get(ptr: *anyopaque, result: *anyopaque) void {
             const self: Ptr = @ptrCast(@alignCast(ptr));
             const typed_result: *T = @ptrCast(@alignCast(result));
@@ -46,16 +39,11 @@ pub fn init(
     return .{
         .ptr = pointer,
         .vtable = .{
-            .version = vtable.version,
             .get = vtable.get,
             .addSub = vtable.addSub,
             .removeSub = vtable.removeSub,
         },
     };
-}
-
-pub fn version(self: *@This()) u32 {
-    return self.vtable.version(self.ptr);
 }
 
 pub fn get(self: *@This(), comptime T: type) T {

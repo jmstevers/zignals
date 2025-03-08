@@ -19,7 +19,6 @@ const Allocator = std.mem.Allocator;
 pub fn Signal(comptime T: type) type {
     return struct {
         value: T,
-        version: u32 = 1,
         subs: std.ArrayListUnmanaged(Subscriber) = .empty,
 
         pub fn init(value: T) @This() {
@@ -39,15 +38,10 @@ pub fn Signal(comptime T: type) type {
         pub fn set(self: *@This(), value: T) void {
             if (std.meta.eql(self.value, value)) return;
             self.value = value;
-            self.version += 1;
 
             for (self.subs.items) |sub| {
                 sub.markDirty();
             }
-        }
-
-        fn v(self: *@This()) u32 {
-            return self.version;
         }
 
         pub fn addSub(self: *@This(), allocator: Allocator, sub: Subscriber) !void {
@@ -63,7 +57,7 @@ pub fn Signal(comptime T: type) type {
         }
 
         pub fn dependency(self: *@This()) Dependency {
-            return .init(T, self, v, addSub, removeSub);
+            return .init(T, self, addSub, removeSub);
         }
     };
 }

@@ -27,7 +27,7 @@ pub fn Effect(comptime fun: anytype, comptime n: u32) type {
     };
 
     return struct {
-        version_sum: u32 = 0,
+        fn_args: ?FnArgs = null,
         deps: [n]Dependency,
 
         pub fn init(deps: [n]Dependency) @This() {
@@ -45,14 +45,12 @@ pub fn Effect(comptime fun: anytype, comptime n: u32) type {
 
         pub fn markDirty(self: *@This()) void {
             var fn_args: FnArgs = undefined;
-            var version_sum: u32 = 0;
             inline for (0..n) |i| {
                 fn_args[i] = self.deps[i].get(@TypeOf(fn_args[i]));
-                version_sum += self.deps[i].version();
             }
 
-            if (self.version_sum == version_sum) return;
-            self.version_sum = version_sum;
+            if (self.fn_args != null and std.meta.eql(self.fn_args, fn_args)) return;
+            self.fn_args = fn_args;
 
             if (fallible) {
                 // TODO: better error handling

@@ -29,8 +29,7 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
     return struct {
         value: T = undefined,
         dirty: bool = true,
-        version: u32 = 1,
-        version_sum: u32 = 0,
+        fn_args: ?FnArgs = null,
         deps: [n]Dependency,
         subs: std.ArrayListUnmanaged(Subscriber) = .empty,
 
@@ -58,20 +57,17 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
             self.dirty = false;
 
             var fn_args: FnArgs = undefined;
-            var version_sum: u32 = 0;
             inline for (0..n) |i| {
                 fn_args[i] = self.deps[i].get(@TypeOf(fn_args[i]));
-                version_sum += self.deps[i].version();
             }
 
-            if (self.version_sum == version_sum) return;
-            self.version_sum = version_sum;
+            if (self.fn_args != null and std.meta.eql(self.fn_args, fn_args)) return;
+            self.fn_args = fn_args;
 
             const value = @call(.auto, fun, fn_args);
             if (std.meta.eql(self.value, value)) return;
 
             self.value = value;
-            self.version += 1;
         }
 
         pub fn markDirty(self: *@This()) void {
@@ -84,10 +80,6 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
 
         pub fn subscriber(self: *@This()) Subscriber {
             return .init(self, markDirty);
-        }
-
-        fn v(self: *@This()) u32 {
-            return self.version;
         }
 
         pub fn addSub(self: *@This(), allocator: Allocator, sub: Subscriber) !void {
@@ -103,7 +95,7 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
         }
 
         pub fn dependency(self: *@This()) Dependency {
-            return .init(T, self, v, addSub, removeSub);
+            return .init(T, self, addSub, removeSub);
         }
     };
 }
