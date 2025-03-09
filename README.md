@@ -28,6 +28,7 @@ exe.root_module.addImport("zignals", zignals);
 ```zig
 const std = @import("std");
 const zignals = @import("zignals");
+const expectEqual = std.testing.expectEqual;
 
 var count: u32 = 0;
 
@@ -72,14 +73,14 @@ After [installing](#installation), start by importing the library.
 const zignals = @import("zignals");
 ```
 
-First, define a signal with an initial value. Signals are reactive state containers that notify dependents when their values change.
+Define a signal with an initial value. A signal is a reactive state container that notifies its subscribers whenever its value changes.
 
 ```zig
 const counter = zignals.signalT(u32, 0);
 ```
 
 > [!TIP]
->To create a signal without specifying its type, you can create signals with automatic type inference using the `signal` function.
+>To avoid explicitly specifying a type, you can use automatic type inference with the `signal` function.
 >```zig
 >const Foo = struct {
 >   bar: []const u8 = "baz",
@@ -90,26 +91,25 @@ const counter = zignals.signalT(u32, 0);
 >const signal = zignals.signal(foo); // inferred as Signal(Foo)
 > ```
 
-With the signal created, you can create a derived value. Derivations are lazily computed and only update when you read them.
+Once the signal is set up, you can create a derived value that subscribes to it. Derivations are computed lazily, meaning they only update when their value is read. This approach is useful for expensive computations that you want to perform only once per update.
 
 ```zig
 const increment = try zignals.derived(allocator, addOne, .{counter});
 ```
 
-This creates an effect that runs when dependencies change. Effects run immediately on creation and again whenever their dependencies update.
+Next, create an effect that subscribes to the derived value. Effects execute immediately upon creation and run again whenever any of their dependencies update.
 
 ```zig
 const effect = try zignals.effect(allocator, log, .{increment});
 ```
 
-The effect has already run once during initialization.
+The effect has already ran once during initialization.
 
 ```zig
 try expectEqual(1, count);
 try expectEqual(1, increment.get());
 ```
-
-When a signal updates, all derived values are marked dirty and effects that depend on the signal are automatically updated.
+When you update the signal, all subscribed derived values are marked as dirty, and the corresponding effects automatically recalculate their values.
 
 ```zig
 counter.set(1);
@@ -117,7 +117,6 @@ counter.set(1);
 try expectEqual(2, count);
 try expectEqual(2, increment.get());
 ```
-
 
 ## Special Thanks
 
