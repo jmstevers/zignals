@@ -72,13 +72,7 @@ After [installing](#installation), start by importing the library.
 const zignals = @import("zignals");
 ```
 
-First, initialize a zignals that will keep track of update batches.
-
-```zig
-var zignals = zignals.System.init(allocator);
-```
-
-Next, define a signal with an initial value. Signals are reactive state containers that notify dependents when their values change.
+First, define a signal with an initial value. Signals are reactive state containers that notify dependents when their values change.
 
 ```zig
 const counter = zignals.signalT(u32, 0);
