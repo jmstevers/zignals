@@ -64,10 +64,7 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
             if (self.fn_args != null and std.meta.eql(self.fn_args, fn_args)) return;
             self.fn_args = fn_args;
 
-            const value = @call(.auto, fun, fn_args);
-            if (std.meta.eql(self.value, value)) return;
-
-            self.value = value;
+            self.value = @call(.auto, fun, fn_args);
         }
 
         pub fn markDirty(self: *@This()) void {
