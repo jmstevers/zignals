@@ -1,7 +1,7 @@
 .{
     .name = .zignals,
     .fingerprint = 0x433580defa3ca5e3,
-    .version = "0.2.0",
+    .version = "0.0.3",
     .dependencies = .{
         .zbench = .{
             .url = "git+https://github.com/hendriknielaender/zBench#fb3c3bb04070b6d7fcc0b9a27d6e89d45b1141c6",
