@@ -13,9 +13,9 @@ const Allocator = std.mem.Allocator;
 /// }
 ///
 /// const counter = zignals.signalT(u32, 1);
-/// defer counter.deinit(allocator);
-/// const doubled = try zignals.derived(allocator, double, .{counter});
-/// defer doubled.deinit(allocator);
+/// defer counter.deinit(gpa);
+/// const doubled = try zignals.derived(gpa, double, .{counter});
+/// defer doubled.deinit(gpa);
 ///
 /// try std.testing.expectEqual(2, doubled.get());
 /// ```
@@ -39,12 +39,12 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
             };
         }
 
-        pub fn deinit(self: *@This(), allocator: Allocator) void {
+        pub fn deinit(self: *@This(), gpa: Allocator) void {
             const sub = self.subscriber();
             for (&self.deps) |*dep| {
                 dep.removeSub(sub);
             }
-            self.subs.deinit(allocator);
+            self.subs.deinit(gpa);
         }
 
         pub fn get(self: *@This()) T {
@@ -82,8 +82,8 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
             return .init(self, markDirty);
         }
 
-        pub fn addSub(self: *@This(), allocator: Allocator, sub: Subscriber) !void {
-            try self.subs.append(allocator, sub);
+        pub fn addSub(self: *@This(), gpa: Allocator, sub: Subscriber) !void {
+            try self.subs.append(gpa, sub);
         }
 
         pub fn removeSub(self: *@This(), sub: Subscriber) void {

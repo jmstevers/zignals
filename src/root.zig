@@ -54,16 +54,16 @@ pub inline fn signalT(
 /// }
 ///
 /// const counter = zignals.signalT(u32, 1);
-/// defer counter.deinit(allocator);
-/// const doubled = try zignals.derived(allocator, double, .{counter});
-/// defer doubled.deinit(allocator);
+/// defer counter.deinit(gpa);
+/// const doubled = try zignals.derived(gpa, double, .{counter});
+/// defer doubled.deinit(gpa);
 ///
 /// try std.testing.expectEqual(2, doubled.get());
 /// ```
 ///
 /// ### Function Signature
 pub inline fn derived(
-    allocator: Allocator,
+    gpa: Allocator,
     comptime fun: anytype,
     deps: anytype,
 ) !*Derived(fun, @typeInfo(@TypeOf(deps)).@"struct".fields.len) {
@@ -74,14 +74,13 @@ pub inline fn derived(
         dependencies[i] = dep.dependency();
     }
     var der = Derived(fun, n).init(dependencies);
+    errdefer der.deinit(gpa);
 
     const sub = der.subscriber();
 
     for (&dependencies) |*dep| {
-        try dep.addSub(allocator, sub);
+        try dep.addSub(gpa, sub);
     }
-
-    // _ = der.get();
 
     return &der;
 }
@@ -97,14 +96,14 @@ pub inline fn derived(
 /// }
 ///
 /// const counter = zignals.signalT(u32, 0);
-/// defer counter.deinit(allocator);
-/// const printer = try zignals.effect(allocator, print, .{counter});
-/// defer printer.deinit(allocator);
+/// defer counter.deinit(gpa);
+/// const printer = try zignals.effect(gpa, print, .{counter});
+/// defer printer.deinit(gpa);
 /// ```
 ///
 /// ### Function Signature
 pub inline fn effect(
-    allocator: Allocator,
+    gpa: Allocator,
     comptime fun: anytype,
     deps: anytype,
 ) !*Effect(fun, @typeInfo(@TypeOf(deps)).@"struct".fields.len) {
@@ -115,11 +114,12 @@ pub inline fn effect(
         dependencies[i] = dep.dependency();
     }
     var eff = Effect(fun, n).init(dependencies);
+    errdefer eff.deinit();
 
     const sub = eff.subscriber();
 
     for (&dependencies) |*dep| {
-        try dep.addSub(allocator, sub);
+        try dep.addSub(gpa, sub);
     }
 
     eff.markDirty();

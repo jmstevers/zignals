@@ -12,9 +12,9 @@ const Dependency = @import("Dependency.zig");
 /// }
 ///
 /// const counter = zignals.signalT(u32, 0);
-/// defer counter.deinit(allocator);
-/// const printer = try zignals.effect(allocator, print, .{counter});
-/// defer printer.deinit(allocator);
+/// defer counter.deinit(gpa);
+/// const printer = try zignals.effect(gpa, print, .{counter});
+/// defer printer.deinit(gpa);
 /// ```
 ///
 /// ### Function Signature

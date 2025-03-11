@@ -2,12 +2,12 @@ const std = @import("std");
 const zbench = @import("zbench");
 
 pub fn benchmark(
-    allocator: std.mem.Allocator,
+    gpa: std.mem.Allocator,
     name: []const u8,
     comptime f: fn (std.mem.Allocator) void,
 ) !void {
     var bench = zbench.Benchmark.init(
-        allocator,
+        gpa,
         .{},
     );
     defer bench.deinit();

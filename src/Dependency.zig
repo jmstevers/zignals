@@ -4,7 +4,7 @@ const Allocator = std.mem.Allocator;
 
 const VTable = struct {
     get: *const fn (ptr: *anyopaque, result: *anyopaque) void,
-    addSub: *const fn (ptr: *anyopaque, allocator: Allocator, sub: Subscriber) anyerror!void,
+    addSub: *const fn (ptr: *anyopaque, gpa: Allocator, sub: Subscriber) anyerror!void,
     removeSub: *const fn (ptr: *anyopaque, sub: Subscriber) void,
 };
 
@@ -14,7 +14,7 @@ vtable: VTable,
 pub fn init(
     comptime T: type,
     pointer: anytype,
-    comptime addSubFn: fn (ptr: @TypeOf(pointer), allocator: Allocator, sub: Subscriber) anyerror!void,
+    comptime addSubFn: fn (ptr: @TypeOf(pointer), gpa: Allocator, sub: Subscriber) anyerror!void,
     comptime removeSubFn: fn (ptr: @TypeOf(pointer), sub: Subscriber) void,
 ) @This() {
     const Ptr = @TypeOf(pointer);
@@ -25,9 +25,9 @@ pub fn init(
             typed_result.* = self.get();
         }
 
-        fn addSub(ptr: *anyopaque, allocator: Allocator, sub: Subscriber) !void {
+        fn addSub(ptr: *anyopaque, gpa: Allocator, sub: Subscriber) !void {
             const self: Ptr = @ptrCast(@alignCast(ptr));
-            try addSubFn(self, allocator, sub);
+            try addSubFn(self, gpa, sub);
         }
 
         fn removeSub(ptr: *anyopaque, sub: Subscriber) void {
@@ -52,8 +52,8 @@ pub fn get(self: *@This(), comptime T: type) T {
     return result;
 }
 
-pub fn addSub(self: *@This(), allocator: Allocator, sub: Subscriber) !void {
-    try self.vtable.addSub(self.ptr, allocator, sub);
+pub fn addSub(self: *@This(), gpa: Allocator, sub: Subscriber) !void {
+    try self.vtable.addSub(self.ptr, gpa, sub);
 }
 
 pub fn removeSub(self: *@This(), sub: Subscriber) void {

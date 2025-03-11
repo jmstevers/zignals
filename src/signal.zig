@@ -27,8 +27,8 @@ pub fn Signal(comptime T: type) type {
             };
         }
 
-        pub fn deinit(self: *@This(), allocator: Allocator) void {
-            self.subs.deinit(allocator);
+        pub fn deinit(self: *@This(), gpa: Allocator) void {
+            self.subs.deinit(gpa);
         }
 
         pub fn get(self: @This()) T {
@@ -44,8 +44,8 @@ pub fn Signal(comptime T: type) type {
             }
         }
 
-        pub fn addSub(self: *@This(), allocator: Allocator, sub: Subscriber) !void {
-            try self.subs.append(allocator, sub);
+        pub fn addSub(self: *@This(), gpa: Allocator, sub: Subscriber) !void {
+            try self.subs.append(gpa, sub);
         }
 
         pub fn removeSub(self: *@This(), sub: Subscriber) void {
