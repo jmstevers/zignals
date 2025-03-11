@@ -68,6 +68,7 @@ pub fn Derived(comptime fun: anytype, comptime n: u32) type {
         }
 
         pub fn markDirty(self: *@This()) void {
+            if (self.dirty) return;
             self.dirty = true;
 
             for (self.subs.items) |sub| {
